@@ -44,9 +44,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   <input id="key" type="password" placeholder="วาง key จาก aistudio.google.com/app/api-keys" autocomplete="off">
   <label for="model">โมเดล</label>
   <select id="model">
-    <option value="gemini-2.5-flash">gemini-2.5-flash (แนะนำ)</option>
-    <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (เร็ว โควตาเยอะ)</option>
-    <option value="gemini-2.5-pro">gemini-2.5-pro (ฉลาดสุด)</option>
+    <option value="gemini-3.8-flash">gemini-3.8-flash (แนะนำ)</option>
+    <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (เร็ว โควตาเยอะ)</option>
+    <option value="gemini-3.5-flash">gemini-3.5-flash</option>
   </select>
   <p class="sub" style="margin:8px 0 0;font-size:14px">ไม่มี key ก็ใช้ได้: ปุ่ม AI จะคัดลอกคำสั่งให้ไปวางใน Gemini / ChatGPT / DeepSeek ฟรี</p>
 </div>
@@ -97,12 +97,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 
 <script>
 const $=s=>document.querySelector(s);
-let S={chars:[],key:'',model:'gemini-2.5-flash'};
+let S={chars:[],key:'',model:'gemini-3.8-flash'};
 try{S=Object.assign(S,JSON.parse(localStorage.getItem('drama')||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem('drama',JSON.stringify(S))}catch(e){}};
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600)}
 async function copy(t){try{await navigator.clipboard.writeText(t);toast('คัดลอกแล้ว')}catch(e){prompt('คัดลอกข้อความนี้',t)}}
 
+const MODELS=['gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.5-flash'];
+if(!MODELS.includes(S.model)){S.model=MODELS[0];save()}
 $('#key').value=S.key;$('#model').value=S.model;
 $('#key').oninput=e=>{S.key=e.target.value.trim();save()};
 $('#model').onchange=e=>{S.model=e.target.value;save()};
@@ -111,24 +113,29 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   b.classList.add('on');$('#'+b.dataset.t).classList.add('on');
 });
 
-async function gemini(prompt,json){
-  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+S.model+':generateContent',{
-    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:json?{responseMimeType:'application/json'}:{}})});
-  const d=await r.json();
-  if(!r.ok)throw new Error(d.error&&d.error.message||('HTTP '+r.status));
-  return d.candidates[0].content.parts.map(p=>p.text||'').join('');
+const RETRY=/no longer available|not found|not supported|NOT_FOUND|not available/i;
+async function callModels(models,body,pick){
+  let last;
+  for(const m of models){
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+m+':generateContent',{
+      method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(r.ok){const out=pick(d);if(out)return out;last=new Error('ไม่ได้ผลลัพธ์ (อาจถูกกรองหรือเกินโควตา) ลองปรับข้อความ');continue}
+    last=new Error((d.error&&d.error.message)||('HTTP '+r.status));
+    if(!RETRY.test(last.message))throw last;
+  }
+  throw last;
 }
-async function genImage(prompt){
-  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent',{
-    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['IMAGE'],imageConfig:{aspectRatio:'9:16'}}})});
-  const d=await r.json();
-  if(!r.ok)throw new Error(d.error&&d.error.message||('HTTP '+r.status));
-  const parts=(d.candidates&&d.candidates[0]&&d.candidates[0].content.parts)||[];
-  const p=parts.find(x=>x.inlineData);
-  if(!p)throw new Error('ไม่ได้รูป (อาจถูกกรองหรือเกินโควตา) ลองปรับ Prompt');
-  return 'data:'+p.inlineData.mimeType+';base64,'+p.inlineData.data;
+function gemini(prompt,json){
+  const order=[S.model,...MODELS.filter(m=>m!==S.model)];
+  return callModels(order,{contents:[{parts:[{text:prompt}]}],generationConfig:json?{responseMimeType:'application/json'}:{}},
+    d=>d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts.map(p=>p.text||'').join(''));
+}
+function genImage(prompt){
+  return callModels(['gemini-3.1-flash-image','gemini-2.5-flash-image'],
+    {contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['TEXT','IMAGE'],imageConfig:{aspectRatio:'9:16'}}},
+    d=>{const ps=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[];
+        const p=ps.find(x=>x.inlineData);return p&&('data:'+p.inlineData.mimeType+';base64,'+p.inlineData.data)});
 }
 // รัน AI ถ้ามี key ไม่งั้นคัดลอกคำสั่งให้ไปวางที่ AI ฟรีตัวอื่น
 async function run(btn,prompt,json){
