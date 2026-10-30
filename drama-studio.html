@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>สตูดิโอละครสั้น</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1b1424;--panel:#271d35;--line:#3d2f52;--tx:#f6eef4;--mute:#b3a4c2;--rose:#ff7a9c;--gold:#ffd58a;--ok:#7be0b0}
+@media (prefers-color-scheme:light){:root{--bg:#fbf4f6;--panel:#fff;--line:#ecd6df;--tx:#2a1c33;--mute:#7b6a88;--rose:#d63b68;--gold:#a8650c;--ok:#12805a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 16px/1.6 "Noto Sans Thai Looped",system-ui,sans-serif;padding:0 14px 60px}
+main{max-width:720px;margin:0 auto}
+h1{font-size:26px;font-weight:800;margin:22px 0 2px}
+p.sub{color:var(--mute);margin:0 0 14px}
+nav{display:flex;gap:6px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5}
+nav button{flex:1;padding:10px 4px;border:1px solid var(--line);background:var(--panel);color:var(--mute);border-radius:10px;font:600 15px inherit;font-family:inherit}
+nav button.on{background:var(--rose);color:#fff;border-color:var(--rose)}
+section{display:none}section.on{display:block}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+label{display:block;font-size:14px;color:var(--mute);margin:10px 0 4px}
+input,select,textarea{width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}
+textarea{min-height:90px;resize:vertical}
+button.b{background:var(--rose);color:#fff;border:0;border-radius:10px;padding:10px 16px;font:600 15px inherit;font-family:inherit;margin:10px 8px 0 0}
+button.g{background:transparent;color:var(--tx);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.out{white-space:pre-wrap;font-size:14px;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:10px;margin-top:8px;word-break:break-word}
+.pic{width:100%;max-width:300px;border-radius:10px;margin-top:8px;display:block}
+.tag{color:var(--gold);font-weight:600}
+.chk{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
+.chk input{width:auto}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ok);color:#06251a;padding:10px 16px;border-radius:20px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>สตูดิโอละครสั้น</h1>
+<p class="sub">คิดเรื่อง สร้างตัวละคร แตกฉาก และทำ Prompt ภาพ/วิดีโอแนวตั้ง 9:16</p>
+
+<div class="box">
+  <label for="key">Gemini API Key (เก็บในเครื่องคุณเท่านั้น)</label>
+  <input id="key" type="password" placeholder="วาง key จาก aistudio.google.com/app/api-keys" autocomplete="off">
+  <label for="model">โมเดล</label>
+  <select id="model">
+    <option value="gemini-2.5-flash">gemini-2.5-flash (แนะนำ)</option>
+    <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (เร็ว โควตาเยอะ)</option>
+    <option value="gemini-2.5-pro">gemini-2.5-pro (ฉลาดสุด)</option>
+  </select>
+  <p class="sub" style="margin:8px 0 0;font-size:14px">ไม่มี key ก็ใช้ได้: ปุ่ม AI จะคัดลอกคำสั่งให้ไปวางใน Gemini / ChatGPT / DeepSeek ฟรี</p>
+</div>
+
+<nav>
+  <button data-t="c" class="on">ตัวละคร</button>
+  <button data-t="r">โครงเรื่อง</button>
+  <button data-t="s">ฉาก/Prompt</button>
+</nav>
+
+<section id="c" class="on">
+  <div class="box">
+    <label for="cn">ชื่อ</label><input id="cn">
+    <label for="cr">บทบาท / นิสัย (ภาษาไทย)</label><input id="cr" placeholder="เช่น สาวออฟฟิศซุ่มซ่าม ปากไว ใจดี">
+    <label for="cl">หน้าตา (อังกฤษ ใช้ล็อกหน้า)</label><textarea id="cl"></textarea>
+    <label for="co">การแต่งตัว</label><input id="co">
+    <label for="cv">โทนเสียงพากย์</label><input id="cv">
+    <button class="b" id="cai">ให้ AI ช่วยเขียนลุค</button>
+    <button class="b g" id="cadd">บันทึกตัวละคร</button>
+  </div>
+  <div id="clist"></div>
+</section>
+
+<section id="r">
+  <div class="box">
+    <label for="rp">ไอเดียเรื่อง</label><textarea id="rp" placeholder="เช่น หัวหน้าสุดเนี้ยบกับพนักงานฝึกงานที่ติดอยู่ในลิฟต์ด้วยกัน"></textarea>
+    <label for="rg">แนว</label><input id="rg" value="โรแมนติกคอมเมดี้">
+    <label for="re">จำนวนตอน</label><input id="re" type="number" value="5" min="1" max="50">
+    <label for="rl">ความยาวต่อตอน</label><input id="rl" value="1-2 นาที">
+    <button class="b" id="rai">สร้างโครงเรื่อง</button>
+    <div id="rout" class="out" hidden></div>
+    <button class="b g" id="rcopy" hidden>คัดลอกโครงเรื่อง</button>
+  </div>
+</section>
+
+<section id="s">
+  <div class="box">
+    <label for="st">เนื้อเรื่อง/บทของฉากนี้ (หนึ่งบรรทัด = หนึ่งช็อต)</label>
+    <textarea id="st" style="min-height:130px" placeholder="เช่น&#10;นุ่นวิ่งชนหัวหน้าหน้าลิฟต์ กาแฟหกใส่เสื้อเชิ้ต&#10;ทั้งคู่ตะลึง นุ่นรีบเอาทิชชูมาเช็ด"></textarea>
+    <label>ตัวละครที่อยู่ในฉาก</label>
+    <div id="scs"><span class="sub">เพิ่มตัวละครที่แท็บแรกก่อน</span></div>
+    <button class="b" id="sai">สร้าง Prompt ช็อตละ 8 วินาที</button>
+  </div>
+  <div id="sout"></div>
+</section>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+let S={chars:[],key:'',model:'gemini-2.5-flash'};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem('drama')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('drama',JSON.stringify(S))}catch(e){}};
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600)}
+async function copy(t){try{await navigator.clipboard.writeText(t);toast('คัดลอกแล้ว')}catch(e){prompt('คัดลอกข้อความนี้',t)}}
+
+$('#key').value=S.key;$('#model').value=S.model;
+$('#key').oninput=e=>{S.key=e.target.value.trim();save()};
+$('#model').onchange=e=>{S.model=e.target.value;save()};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button,section').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');$('#'+b.dataset.t).classList.add('on');
+});
+
+async function gemini(prompt,json){
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+S.model+':generateContent',{
+    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:json?{responseMimeType:'application/json'}:{}})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error&&d.error.message||('HTTP '+r.status));
+  return d.candidates[0].content.parts.map(p=>p.text||'').join('');
+}
+async function genImage(prompt){
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent',{
+    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['IMAGE'],imageConfig:{aspectRatio:'9:16'}}})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error&&d.error.message||('HTTP '+r.status));
+  const parts=(d.candidates&&d.candidates[0]&&d.candidates[0].content.parts)||[];
+  const p=parts.find(x=>x.inlineData);
+  if(!p)throw new Error('ไม่ได้รูป (อาจถูกกรองหรือเกินโควตา) ลองปรับ Prompt');
+  return 'data:'+p.inlineData.mimeType+';base64,'+p.inlineData.data;
+}
+// รัน AI ถ้ามี key ไม่งั้นคัดลอกคำสั่งให้ไปวางที่ AI ฟรีตัวอื่น
+async function run(btn,prompt,json){
+  if(!S.key){await copy(prompt);toast('ยังไม่มี key: คัดลอกคำสั่งแล้ว วางใน Gemini/ChatGPT ได้เลย');return null}
+  const old=btn.textContent;btn.textContent='กำลังคิด...';btn.disabled=true;
+  try{return await gemini(prompt,json)}
+  catch(e){toast('ผิดพลาด: '+e.message);return null}
+  finally{btn.textContent=old;btn.disabled=false}
+}
+
+/* ตัวละคร */
+const lock=c=>`${c.name}: ${c.look}, wearing ${c.outfit}. Keep the exact same face, hairstyle and outfit in every shot.`;
+function drawChars(){
+  const L=$('#clist');L.innerHTML='';
+  S.chars.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='box';
+    const h=document.createElement('div');h.className='tag';h.textContent=c.name+' · '+c.role;
+    const o=document.createElement('div');o.className='out';o.textContent=lock(c)+(c.voice?'\nVoice: '+c.voice:'');
+    const b1=document.createElement('button');b1.className='b';b1.textContent='คัดลอก Prompt ตั้งต้น';b1.onclick=()=>copy(lock(c));
+    const b2=document.createElement('button');b2.className='b g';b2.textContent='ลบ';b2.onclick=()=>{S.chars.splice(i,1);save();drawChars()};
+    d.append(h,o,b1,b2);L.append(d);
+  });
+  const sc=$('#scs');
+  sc.innerHTML=S.chars.length?'':'<span class="sub">เพิ่มตัวละครที่แท็บแรกก่อน</span>';
+  S.chars.forEach((c,i)=>{
+    const l=document.createElement('label');l.className='chk';
+    l.innerHTML='<input type="checkbox" value="'+i+'" checked> ';
+    l.append(c.name);sc.append(l);
+  });
+}
+$('#cadd').onclick=()=>{
+  const c={name:$('#cn').value.trim(),role:$('#cr').value.trim(),look:$('#cl').value.trim(),outfit:$('#co').value.trim(),voice:$('#cv').value.trim()};
+  if(!c.name)return toast('ใส่ชื่อตัวละครก่อน');
+  S.chars.push(c);save();drawChars();
+  ['cn','cr','cl','co','cv'].forEach(i=>$('#'+i).value='');toast('บันทึกแล้ว');
+};
+$('#cai').onclick=async e=>{
+  const n=$('#cn').value.trim(),r=$('#cr').value.trim();
+  if(!n||!r)return toast('ใส่ชื่อและบทบาทก่อน');
+  const p=`Create a character bible entry for a Thai short drama. Name: ${n}. Role/personality (Thai): ${r}. Return JSON with keys: look (English, 30-45 words: age, Thai ethnicity, face, hair, skin, build, distinguishing features, for consistent AI image generation), outfit (English, one signature outfit), voice (Thai, vocal tone for dubbing).`;
+  const t=await run(e.target,p,true);if(!t)return;
+  try{const j=JSON.parse(t);$('#cl').value=j.look||'';$('#co').value=j.outfit||'';$('#cv').value=j.voice||''}
+  catch(x){toast('อ่านผลลัพธ์ไม่ได้ ลองใหม่')}
+};
+
+/* โครงเรื่อง */
+$('#rai').onclick=async e=>{
+  const p=`เป็นนักเขียนบทละครสั้นมืออาชีพ ช่วยวางโครงเรื่องภาษาไทย\nไอเดีย: ${$('#rp').value||'(ให้คุณคิดเอง)'}\nแนว: ${$('#rg').value}\nจำนวน ${$('#re').value} ตอน ตอนละ ${$('#rl').value}\nสรุปตัวละครหลัก แล้วเขียนโครงเรื่องรายตอน (แต่ละตอนมีฮุคเปิด จุดหักมุม และคลิฟแฮงเกอร์ท้ายตอน)`;
+  const t=await run(e.target,p,false);if(!t)return;
+  $('#rout').hidden=false;$('#rout').textContent=t;$('#rcopy').hidden=false;
+};
+$('#rcopy').onclick=()=>copy($('#rout').textContent);
+
+/* ฉาก/Prompt */
+$('#sai').onclick=async e=>{
+  const lines=$('#st').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  if(!lines.length)return toast('ใส่เนื้อเรื่องของฉากก่อน');
+  const ids=[...document.querySelectorAll('#scs input:checked')].map(x=>S.chars[+x.value]);
+  const locks=ids.map(lock).join('\n');
+  const p=`You are a prompt engineer for AI video. Break this Thai scene into shots of exactly 8 seconds each (one shot per line, split a line if it needs more than 8 seconds).\nScene:\n${lines.join('\n')}\n\nCharacters (copy these descriptions verbatim into every prompt where the character appears):\n${locks}\n\nReturn a JSON array. Each item: {"th": short Thai summary, "image": English still-image prompt, vertical 9:16, cinematic, "video": English video prompt for 8 seconds with camera movement, action, and Thai dialogue in quotes}.`;
+  const out=$('#sout');
+  let shots;
+  if(S.key){
+    const t=await run(e.target,p,true);if(!t)return;
+    try{shots=JSON.parse(t)}catch(x){return toast('อ่านผลลัพธ์ไม่ได้ ลองใหม่')}
+  }else{
+    await run(e.target,p,true);
+    shots=lines.map(l=>({th:l,image:`${l}. ${locks} Vertical 9:16, cinematic, soft light.`,video:`8 seconds. ${l}. ${locks} Vertical 9:16, smooth camera movement.`}));
+  }
+  out.innerHTML='';
+  shots.forEach((s,i)=>{
+    const d=document.createElement('div');d.className='box';
+    const h=document.createElement('div');h.className='tag';h.textContent='ช็อต '+(i+1)+' · '+s.th;
+    const a=document.createElement('div');a.className='out';a.textContent='ภาพ: '+s.image;
+    const v=document.createElement('div');v.className='out';v.textContent='วิดีโอ: '+s.video;
+    const b1=document.createElement('button');b1.className='b';b1.textContent='คัดลอก Prompt ภาพ';b1.onclick=()=>copy(s.image);
+    const b2=document.createElement('button');b2.className='b g';b2.textContent='คัดลอก Prompt วิดีโอ';b2.onclick=()=>copy(s.video);
+    const b3=document.createElement('button');b3.className='b';b3.textContent='เจนภาพ 9:16 (ฟรี)';
+    const im=document.createElement('img');im.className='pic';im.hidden=true;im.alt='ภาพช็อต '+(i+1);
+    b3.onclick=async()=>{
+      if(!S.key)return toast('ใส่ Gemini API Key ก่อนจึงเจนภาพในเว็บได้');
+      b3.disabled=true;b3.textContent='กำลังเจน...';
+      try{im.src=await genImage(s.image);im.hidden=false;
+        const dl=document.createElement('a');dl.href=im.src;dl.download='shot-'+(i+1)+'.png';dl.textContent='ดาวน์โหลดภาพ';dl.className='tag';dl.style.display='block';im.after(dl)}
+      catch(x){toast('ผิดพลาด: '+x.message)}
+      b3.disabled=false;b3.textContent='เจนภาพ 9:16 (ฟรี)';
+    };
+    d.append(h,a,v,b3,b1,b2,im);out.append(d);
+  });
+};
+drawChars();
+</script>
+</body>
+</html>
