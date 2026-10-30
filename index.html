@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>สตูดิโอละครสั้น</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1b1424">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ละครสั้น">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#1b1424;--panel:#271d35;--line:#3d2f52;--tx:#f6eef4;--mute:#b3a4c2;--rose:#ff7a9c;--gold:#ffd58a;--ok:#7be0b0}
@@ -37,6 +44,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <body>
 <main>
 <h1>สตูดิโอละครสั้น</h1>
+<button class="b g" id="inst" hidden>ติดตั้งแอปลงเครื่อง</button>
 <p class="sub">คิดเรื่อง สร้างตัวละคร แตกฉาก และทำ Prompt ภาพ/วิดีโอแนวตั้ง 9:16</p>
 
 <div class="box">
@@ -227,6 +235,13 @@ $('#sai').onclick=async e=>{
   });
 };
 drawChars();
+
+/* PWA */
+let dp=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;$('#inst').hidden=false});
+$('#inst').onclick=async()=>{if(!dp)return;dp.prompt();await dp.userChoice;dp=null;$('#inst').hidden=true};
+addEventListener('appinstalled',()=>{$('#inst').hidden=true;toast('ติดตั้งแล้ว')});
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
